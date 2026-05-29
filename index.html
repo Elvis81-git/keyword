@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KEYWORD - Neon Typing Clash (English & Zhuyin)</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Socket.io client library -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <h1>KEYWORD</h1>
+      <span>Neon Typing Clash</span>
+    </div>
+    <div class="system-status">
+      <div id="connection-status" class="status-badge offline">Server Offline</div>
+      <button id="mute-toggle-btn" class="btn-icon" title="Toggle Sound">
+        <!-- SVG Speaker Icon -->
+        <svg id="speaker-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main-container">
+    
+    <!-- 1. MAIN MENU & SETTINGS SCREEN -->
+    <div id="menu-screen" class="screen-panel">
+      <div class="menu-grid">
+        
+        <!-- Left: Single Player (Solo Mode) -->
+        <div class="menu-section">
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            單機模式 (SOLO PLAY)
+          </h2>
+          
+          <div class="form-group">
+            <label>語系選擇 (Language)</label>
+            <div class="option-selector" id="solo-lang-selector">
+              <button class="option-btn active" data-value="english">ENGLISH</button>
+              <button class="option-btn" data-value="zhuyin">注音 (BOPOMOFO)</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>難度選擇 (Difficulty)</label>
+            <div class="option-selector" id="solo-diff-selector">
+              <button class="option-btn" data-value="easy">EASY</button>
+              <button class="option-btn active" data-value="medium">MEDIUM</button>
+              <button class="option-btn" data-value="hard">HARD</button>
+            </div>
+          </div>
+          
+          <div class="action-buttons">
+            <button id="start-solo-btn" class="btn-primary">開始單機遊戲</button>
+          </div>
+        </div>
+        
+        <!-- Right: Multiplayer Mode -->
+        <div class="menu-section">
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            聯線模式 (MULTIPLAYER)
+          </h2>
+          
+          <div class="form-group">
+            <label>玩家名稱 (Username)</label>
+            <input type="text" id="username-input" class="form-control" placeholder="輸入暱稱..." maxlength="12">
+          </div>
+          
+          <div class="form-group">
+            <label>語系選擇 (Language)</label>
+            <div class="option-selector" id="multi-lang-selector">
+              <button class="option-btn active" data-value="english">ENGLISH</button>
+              <button class="option-btn" data-value="zhuyin">注音 (BOPOMOFO)</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>難度選擇 (Difficulty)</label>
+            <div class="option-selector" id="multi-diff-selector">
+              <button class="option-btn" data-value="easy">EASY</button>
+              <button class="option-btn active" data-value="medium">MEDIUM</button>
+              <button class="option-btn" data-value="hard">HARD</button>
+            </div>
+          </div>
+          
+          <div class="action-buttons">
+            <button id="join-battle-btn" class="btn-primary">加入多人對戰 (JOIN BATTLE)</button>
+          </div>
+          
+          <div class="connection-config">
+            <details>
+              <summary>進階伺服器設定 (Render Server Settings)</summary>
+              <div class="form-group" style="margin-top: 0.5rem;">
+                <label>伺服器網址 (Server URL)</label>
+                <input type="text" id="server-url-input" class="form-control" placeholder="https://keyword-typer.onrender.com">
+                <span style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">
+                  * 免費 Render 伺服器首次連線可能需要 30~50 秒進行喚醒。
+                </span>
+              </div>
+            </details>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- 2. MULTIPLAYER ROOM LOBBY SCREEN -->
+    <div id="lobby-screen" class="screen-panel hidden">
+      <div style="text-align: center; max-width: 500px; margin: 0 auto; padding: 2rem 0;">
+        <div class="matchmaking-spinner" style="margin-bottom: 2rem;">
+          <div class="pulse-ring"></div>
+        </div>
+        <h2 id="lobby-status-title" style="font-family: var(--font-game); color: var(--secondary); margin-bottom: 1rem;">正在尋找對手...</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem;">
+          正在為您配對伺服器中的其他玩家，配對成功後遊戲將會自動啟動！
+        </p>
+        <button id="leave-lobby-btn" class="btn-secondary" style="max-width: 200px; margin: 0 auto;">取消配對 (CANCEL)</button>
+      </div>
+    </div>
+    
+    <!-- 3. GAME ARENA SCREEN -->
+    <div id="game-arena-screen" class="screen-panel hidden" style="padding: 1.5rem;">
+      <div class="arena-header">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <h2 id="arena-title" style="font-family: var(--font-game); font-size: 1.2rem; color: var(--primary-glow);">SINGLE PLAYER</h2>
+          <div id="arena-timer" style="font-family: var(--font-game); font-size: 1.5rem; font-weight: 800; color: var(--secondary); text-shadow: 0 0 10px rgba(6, 182, 212, 0.4); background: rgba(0,0,0,0.3); padding: 0.2rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">60s</div>
+        </div>
+        <button id="exit-arena-btn" class="btn-secondary" style="width: auto; padding: 0.4rem 1rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4); color: var(--danger-glow);">
+          中途退出 (QUIT)
+        </button>
+      </div>
+      
+      <!-- Side-by-side gameplay panels -->
+      <div class="game-split-container" id="arena-multiplayer-split">
+        
+        <!-- Local Player Pane -->
+        <div class="player-arena-pane" id="local-pane">
+          <!-- Stats Board -->
+          <div class="dashboard-grid">
+            <div class="stat-card">
+              <label>分數 Score</label>
+              <span id="local-score" class="highlight">0</span>
+            </div>
+            <div class="stat-card">
+              <label>連續擊中 Combo</label>
+              <span id="local-streak">0</span>
+            </div>
+            <div class="stat-card">
+              <label>準確率 Acc</label>
+              <span id="local-accuracy">100%</span>
+            </div>
+            <div class="stat-card">
+              <label>生命值 Lives</label>
+              <div id="local-lives" class="lives-container">
+                <!-- Hearts -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Local Game Board -->
+          <div class="game-board" id="local-board">
+            <div class="danger-line"></div>
+            <div class="danger-label">Danger</div>
+            <div id="local-letters"></div>
+            
+            <!-- Absolute Overlays -->
+            <div id="arena-countdown-overlay" class="arena-countdown-overlay hidden">3</div>
+            <div id="speed-alert" class="speed-alert">⚠️ 被重力加速！ (Speed Up)</div>
+          </div>
+          
+          <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted);">
+            你的速度 multiplier: <strong id="local-speed" style="color: var(--secondary-glow);">1.0x</strong>
+          </div>
+        </div>
+        
+        <!-- Opponent Player Pane -->
+        <div class="player-arena-pane" id="opponent-pane">
+          <!-- Stats Board -->
+          <div class="dashboard-grid">
+            <div class="stat-card">
+              <label>對手分數 Score</label>
+              <span id="opponent-score">0</span>
+            </div>
+            <div class="stat-card">
+              <label>連續擊中 Combo</label>
+              <span id="opponent-streak">0</span>
+            </div>
+            <div class="stat-card">
+              <label>準確率 Acc</label>
+              <span id="opponent-accuracy">100%</span>
+            </div>
+            <div class="stat-card">
+              <label>對手生命值 Lives</label>
+              <div id="opponent-lives" class="lives-container">
+                <!-- Hearts -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Opponent Game Board -->
+          <div class="game-board" id="opponent-board">
+            <div class="danger-line"></div>
+            <div class="danger-label" id="opponent-name-badge">OPPONENT</div>
+            <div id="opponent-letters"></div>
+          </div>
+          
+          <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted);">
+            對手速度 multiplier: <strong id="opponent-speed">1.0x</strong>
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- Virtual Keyboard Guidance -->
+      <div style="margin-top: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">鍵盤指引 (Keyboard Helper)</span>
+        <div class="keyboard-helper" id="virtual-keyboard">
+          <!-- Generated Dynamically -->
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- 4. GAMEOVER SCREEN -->
+    <div id="gameover-screen" class="screen-panel hidden">
+      <div class="gameover-container">
+        <h2 id="gameover-title" class="victory-text">遊戲結束</h2>
+        <p id="gameover-subtitle">感謝遊玩！</p>
+        
+        <div class="stats-summary">
+          <div class="summary-card">
+            <label>最終分數</label>
+            <span id="gameover-score">0</span>
+          </div>
+          <div class="summary-card">
+            <label>最大連擊 Combo</label>
+            <span id="gameover-streak">0</span>
+          </div>
+          <div class="summary-card">
+            <label>整體準確率</label>
+            <span id="gameover-accuracy">100%</span>
+          </div>
+        </div>
+        
+        <div class="action-buttons" style="max-width: 280px; margin: 0 auto;">
+          <button id="gameover-home-btn" class="btn-primary">返回主選單</button>
+        </div>
+      </div>
+    </div>
+    
+  </main>
+
+  <footer>
+    <p>KEYWORD Typing Game &copy; 2026 | Powered by Socket.io & Render</p>
+  </footer>
+
+  <script type="module">
+    import TypingGame from './game.js';
+    import MultiplayerClient from './multiplayer.js';
+    import { toggleMute, getMuteState } from './sound.js';
+    import { KEYBOARD_LAYOUT } from './zhuyin.js';
+
+    // 1. Initialize core models
+    const game = new TypingGame();
+    const client = new MultiplayerClient(game);
+    
+    let activeLanguage = 'english'; // Default
+    let activeDifficulty = 'medium'; // Default
+    
+    // Auto trigger connection to check if server is running
+    client.connect();
+
+    // 2. Generate Virtual Keyboard helper layout
+    function generateVirtualKeyboard(language) {
+      const keyboardContainer = document.getElementById('virtual-keyboard');
+      keyboardContainer.innerHTML = '';
+      
+      KEYBOARD_LAYOUT.forEach(row => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'vkey-row';
+        
+        row.forEach(item => {
+          const keyEl = document.createElement('div');
+          keyEl.className = 'vkey';
+          keyEl.dataset.key = item.key;
+          
+          const topSpan = document.createElement('span');
+          topSpan.className = 'vk-top';
+          
+          const bottomSpan = document.createElement('span');
+          bottomSpan.className = 'vk-bottom';
+          
+          if (language === 'zhuyin') {
+            topSpan.textContent = item.zhuyin;
+            bottomSpan.textContent = item.key.toUpperCase();
+          } else {
+            topSpan.textContent = item.key.toUpperCase();
+            bottomSpan.textContent = '';
+          }
+          
+          keyEl.appendChild(topSpan);
+          keyEl.appendChild(bottomSpan);
+          rowEl.appendChild(keyEl);
+        });
+        
+        keyboardContainer.appendChild(rowEl);
+      });
+    }
+
+    // Default keyboard generation
+    generateVirtualKeyboard('english');
+
+    // 3. UI Navigation Logic
+    function showScreen(screenId) {
+      // List of all screen panel IDs
+      const screens = ['menu-screen', 'lobby-screen', 'game-arena-screen', 'gameover-screen'];
+      screens.forEach(id => {
+        const el = document.getElementById(id);
+        if (id === screenId) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+
+    // Sound toggle
+    const muteBtn = document.getElementById('mute-toggle-btn');
+    const speakerIcon = document.getElementById('speaker-icon');
+    muteBtn.addEventListener('click', () => {
+      const muted = toggleMute();
+      if (muted) {
+        speakerIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        `;
+        muteBtn.title = "Unmute Sound";
+      } else {
+        speakerIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        `;
+        muteBtn.title = "Mute Sound";
+      }
+    });
+
+    // 4. Handle Setup Selectors
+    function bindSelectors(containerId, callback) {
+      const container = document.getElementById(containerId);
+      const buttons = container.querySelectorAll('.option-btn');
+      
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          buttons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          if (callback) callback(btn.dataset.value);
+        });
+      });
+    }
+
+    // Solo selector sync
+    bindSelectors('solo-lang-selector', (val) => {
+      activeLanguage = val;
+      generateVirtualKeyboard(val);
+    });
+    bindSelectors('solo-diff-selector', (val) => {
+      activeDifficulty = val;
+    });
+
+    // Multi selector sync
+    bindSelectors('multi-lang-selector', (val) => {
+      generateVirtualKeyboard(val);
+    });
+
+    // 5. Game Mode Buttons
+    // Play Solo (Single Player)
+    document.getElementById('start-solo-btn').addEventListener('click', () => {
+      const config = {
+        mode: 'single',
+        language: activeLanguage,
+        difficulty: activeDifficulty
+      };
+      
+      // Update UI title
+      document.getElementById('arena-title').textContent = `SINGLE PLAYER (${activeLanguage.toUpperCase()} - ${activeDifficulty.toUpperCase()})`;
+      
+      // Clear split screen classes (hide opponent pane)
+      document.getElementById('arena-multiplayer-split').classList.remove('active');
+      
+      // Generate the virtual keyboard for the correct language
+      generateVirtualKeyboard(activeLanguage);
+      
+      // Navigate to Arena
+      showScreen('game-arena-screen');
+      
+      // Init local game state
+      game.init(config);
+      
+      // Attach callback for gameover
+      game.onGameOver = (stats) => {
+        showScreen('gameover-screen');
+        document.getElementById('gameover-title').textContent = 'GAME OVER';
+        document.getElementById('gameover-title').className = 'defeat-text';
+        document.getElementById('gameover-subtitle').textContent = '你完成了單機打字挑戰！';
+        document.getElementById('gameover-score').textContent = stats.score;
+        document.getElementById('gameover-streak').textContent = stats.maxStreak;
+        document.getElementById('gameover-accuracy').textContent = `${stats.accuracy}%`;
+      };
+      
+      // Countdown animation 3s
+      let countdown = 3;
+      const overlay = document.getElementById('arena-countdown-overlay');
+      overlay.classList.remove('hidden');
+      overlay.textContent = countdown;
+      
+      const timer = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          overlay.textContent = countdown;
+        } else if (countdown === 0) {
+          overlay.textContent = 'START!';
+        } else {
+          clearInterval(timer);
+          overlay.classList.add('hidden');
+          game.start();
+        }
+      }, 1000);
+    });
+
+    // Exit Arena Button (Quit)
+    document.getElementById('exit-arena-btn').addEventListener('click', () => {
+      if (confirm('確定要結束目前的遊戲嗎？')) {
+        game.stop();
+        client.disconnect();
+        // Reconnect to server to refresh socket
+        client.connect();
+        showScreen('menu-screen');
+      }
+    });
+
+    // Return to main menu from Gameover
+    document.getElementById('gameover-home-btn').addEventListener('click', () => {
+      client.disconnect();
+      client.connect();
+      showScreen('menu-screen');
+    });
+
+    // 6. Multiplayer Matchmaking Actions
+    document.getElementById('join-battle-btn').addEventListener('click', () => {
+      const username = document.getElementById('username-input').value.trim();
+      const language = document.querySelector('#multi-lang-selector .option-btn.active').dataset.value;
+      const difficulty = document.querySelector('#multi-diff-selector .option-btn.active').dataset.value;
+      
+      const startAction = () => {
+        client.joinMatchmaking(username, language, difficulty);
+        showScreen('lobby-screen');
+      };
+      
+      if (!client.socket || !client.socket.connected) {
+        client.connect((connected) => {
+          if (connected) {
+            startAction();
+          } else {
+            alert('無法連線到多人遊戲伺服器。請檢查伺服器設定。');
+          }
+        });
+      } else {
+        startAction();
+      }
+    });
+
+    // Leave Lobby / Cancel matchmaking
+    document.getElementById('leave-lobby-btn').addEventListener('click', () => {
+      client.disconnect();
+      client.connect();
+      showScreen('menu-screen');
+    });
+
+    // Monitor custom server url input changes
+    const serverInput = document.getElementById('server-url-input');
+    serverInput.addEventListener('change', () => {
+      localStorage.setItem('keyword_server_url', serverInput.value.trim());
+      client.connect();
+    });
+
+  </script>
+</body>
+</html>
