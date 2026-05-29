@@ -52,36 +52,35 @@ class MultiplayerClient {
   }
 
   getServerUrl() {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    
     // 1. Get from input if customized
     let url = this.customServerInputEl ? this.customServerInputEl.value.trim() : '';
-    
-    // 2. If running on localhost and input is empty, ALWAYS return local origin
-    if (!url && isLocalhost) {
-      if (this.customServerInputEl) {
-        this.customServerInputEl.placeholder = window.location.origin;
-      }
-      return window.location.origin;
-    }
-    
-    // 3. Get from localStorage
-    if (!url) {
-      url = localStorage.getItem('keyword_server_url') || '';
-    }
-    
-    // 4. Fallback default Render URL
-    if (!url) {
-      url = 'https://keyword-typer-backend.onrender.com';
-    }
-    
-    // Save to local storage for convenience if not on localhost
-    if (!isLocalhost) {
+    if (url) {
       localStorage.setItem('keyword_server_url', url);
+      return url;
     }
     
-    if (this.customServerInputEl && !this.customServerInputEl.value) {
-      this.customServerInputEl.value = url;
+    // 2. Check protocol and host to see how the game was loaded
+    const isLocalFile = window.location.protocol === 'file:' || !window.location.hostname;
+    const isGitHubPages = window.location.hostname.endsWith('github.io');
+    
+    if (isLocalFile || isGitHubPages) {
+      // If loaded as local static file or from GitHub Pages, default to the remote Render server
+      url = localStorage.getItem('keyword_server_url') || '';
+      if (!url) {
+        url = 'https://keyword-typer-backend.onrender.com';
+      }
+    } else {
+      // If served via HTTP/HTTPS from a server (localhost, LAN IP like 192.168.x.x, custom domain),
+      // we ALWAYS connect directly back to the exact same server that served the page.
+      url = window.location.origin;
+    }
+    
+    if (this.customServerInputEl) {
+      this.customServerInputEl.placeholder = url;
+      // Show the active connecting address in the input value so the user knows where they are connecting
+      if (!this.customServerInputEl.value) {
+        this.customServerInputEl.value = url;
+      }
     }
     
     return url;
